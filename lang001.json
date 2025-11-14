@@ -1,0 +1,64 @@
+{
+	"lexer": {
+		"token_types": [
+			"Integer",
+			"Float",
+			"Boolean",
+			"Plus",
+			"Minus",
+			"Times",
+			"Div",
+			"Comma",
+			"Equal",
+			"EqualEqual",
+			"Not",
+			"NotEqual",
+			"LBrace",
+			"RBrace",
+			"LParen",
+			"RParen",
+			"If",
+			"Else",
+			"For",
+			"True",
+			"False",
+			"Func",
+			"Identifier",
+			"Return"
+		],
+		"keyword_map": {
+			"if": "If",
+			"else": "Else",
+			"for": "For",
+			"true": "True",
+			"false": "False",
+			"func": "Func",
+			"return": "Return"
+		},
+		"single_chars": {
+			"+": "Plus",
+			"-": "Minus",
+			"*": "Times",
+			"/": "Div",
+			"{": "LBrace",
+			"}": "RBrace",
+			"(": "LParen",
+			")": "RParen",
+			",": "Comma"
+		},
+		"double_chars": [
+			{
+				"if_single": "=",
+				"single_type": "Equal",
+				"if_double": "=",
+				"double_type": "EqualEqual"
+			},
+		  {
+				"if_single": "!",
+				"single_type": "Not",
+				"if_double": "=",
+				"double_type": "NotEqual"
+			}
+		]
+	}
+}
