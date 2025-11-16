@@ -25,6 +25,37 @@ func TestLexerDefinition(t *testing.T) {
 	}
 }
 
+func TestLexerNextNumber(t *testing.T) {
+	cfg := config.ConfigFromJson([]byte(configuration))
+	if cfg == nil {
+		t.Errorf("Could not instantiate the config")
+	}
+	lexer := lexer.DefineLexer(cfg)
+
+	src := "     1234    1.23 1.23e-4"
+	lexer.AddSource(src)
+
+	tests := []struct {
+		Expect any
+	}{
+		{Expect: int64(1234)},
+		{Expect: float64(1.23)},
+		{Expect: float64(1.23e-4)},
+	}
+	for _, test := range tests {
+		r, eof := lexer.NextNonWhite()
+		if eof {
+			t.Errorf("Unexpected eof")
+		}
+		num, err := lexer.NextNumber(r)
+		if err != nil {
+			t.Errorf("Got an error %s", err)
+		}
+		if num != test.Expect {
+			t.Errorf("Number is %d expecting %v", num, test.Expect)
+		}
+	}
+}
 func TestLexerNextWord(t *testing.T) {
 	cfg := config.ConfigFromJson([]byte(configuration))
 	if cfg == nil {
@@ -35,13 +66,82 @@ func TestLexerNextWord(t *testing.T) {
 	src := "     test    test2 "
 	lexer.AddSource(src)
 
-	word := lexer.NextWord()
+	r, eof := lexer.NextNonWhite()
+	if eof {
+		t.Errorf("Unexpected eof")
+	}
+	word := lexer.NextWord(r)
 	if word != "test" {
 		t.Errorf("exepected \"test\" found %s", word)
 	}
-	word = lexer.NextWord()
+	r, eof = lexer.NextNonWhite()
+	if eof {
+		t.Errorf("Unexpected eof")
+	}
+	word = lexer.NextWord(r)
 	if word != "test2" {
 		t.Errorf("exepected \"test2\" found %s", word)
+	}
+}
+
+func TestLexerNextToken(t *testing.T) {
+	cfg := config.ConfigFromJson([]byte(configuration))
+	if cfg == nil {
+		t.Errorf("Could not instantiate the config")
+	}
+	lexer := lexer.DefineLexer(cfg)
+
+	src := " - * \n + \n = ! != == 1234 1.23e-4"
+	lexer.AddSource(src)
+
+	type test_info struct {
+		expect any
+		tp     string
+	}
+	tests := []test_info{
+		{
+			expect: '-',
+			tp:     "Minus",
+		},
+		{
+			expect: '*',
+			tp:     "Times",
+		},
+		{
+			expect: '+',
+			tp:     "Plus",
+		},
+		{
+			expect: '=',
+			tp:     "Equal",
+		},
+		{
+			expect: '!',
+			tp:     "Not",
+		},
+		{
+			expect: "!=",
+			tp:     "NotEqual",
+		},
+		{
+			expect: "==",
+			tp:     "EqualEqual",
+		},
+		{
+			expect: "1234",
+			tp:     "Number",
+		},
+		{
+			expect: "1.23e-4",
+			tp:     "Number",
+		},
+	}
+
+	for _, test := range tests {
+		token := lexer.NextToken()
+		if lexer.TypeName(token.Type) != test.tp {
+			t.Errorf("Expected %s, Found %s", test.tp, lexer.TypeName(token.Type))
+		}
 	}
 }
 

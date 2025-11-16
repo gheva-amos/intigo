@@ -4,10 +4,6 @@ import (
 	"unicode"
 )
 
-func (l *Lexer) has_source() bool {
-	return l.Source.HasSource()
-}
-
 func (l *Lexer) is_end_char(char rune) bool {
 	if unicode.IsSpace(char) {
 		return true
@@ -22,4 +18,17 @@ func (l *Lexer) is_end_char(char rune) bool {
 
 func (l *Lexer) new_token(val any, tp TokenType) *Token {
 	return NewToken(l.Line(), l.Column(), val, tp)
+}
+
+func (l *Lexer) handle_double_char(current rune, ret *Token, dcd double_char_data) {
+	ret.Type = dcd.IfSingle
+	r, eof := l.Peek()
+	if eof {
+		return
+	}
+	if r == dcd.DoubleChar {
+		ret.Type = dcd.IfDouble
+		ret.Value = string(current) + string(r)
+		l.Next() // consume the second char
+	}
 }

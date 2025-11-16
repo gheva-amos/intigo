@@ -5,6 +5,7 @@ package lexer
 import (
 	"github.com/gheva-amos/intigo/config"
 	"strings"
+	"unicode"
 )
 
 type TokenType int
@@ -12,10 +13,11 @@ type TokenType int
 const (
 	EOF     TokenType = -666
 	Unknown TokenType = -777
+	Number  TokenType = -10
 )
 
 type Lexer struct {
-	Source TextIterator
+	TextIterator
 
 	end_chars []rune
 
@@ -38,7 +40,7 @@ type double_char_data struct {
 func New() *Lexer {
 	ret := &Lexer{}
 
-	ret.Source.Reset()
+	ret.Reset()
 	return ret
 }
 
@@ -48,6 +50,10 @@ func DefineLexer(cfg *config.Config) *Lexer {
 	ret.token_type_names = make(map[TokenType]string)
 	ret.token_type_names[EOF] = "EOF"
 	ret.token_type_names[Unknown] = "Unknown"
+	ret.token_type_names[Number] = "Number"
+	for k, v := range ret.token_type_names {
+		ret.token_types[v] = k
+	}
 	for i, tp := range cfg.Lexer.TokenTypes {
 		ret.token_types[tp] = TokenType(i)
 		ret.token_type_names[TokenType(i)] = tp
@@ -81,24 +87,50 @@ func DefineLexer(cfg *config.Config) *Lexer {
 	return ret
 }
 
-func (l *Lexer) Line() uint64 {
-	return l.Source.Line()
+func (l *Lexer) TypeName(tp TokenType) string {
+	if ret, ok := l.token_type_names[tp]; ok {
+		return ret
+	}
+	return ""
 }
 
-func (l *Lexer) Column() uint64 {
-	return l.Source.Column()
-}
-
-func (l *Lexer) AddSource(source string) {
-	l.Source.AddSource(source)
-}
-
-func (l *Lexer) NextWord() string {
-	l.Source.SkipWhites()
+func (l *Lexer) NextWord(current rune) string {
 	var sb strings.Builder
-	for next, eof := l.Source.Next(); !eof && !l.is_end_char(next); {
+	sb.WriteRune(current)
+	for next, eof := l.Next(); !eof && !l.is_end_char(next); {
 		sb.WriteRune(next)
-		next, eof = l.Source.Next()
+		next, eof = l.Next()
 	}
 	return sb.String()
+}
+
+func (l *Lexer) NextToken() *Token {
+	current, eof := l.NextNonWhite()
+	if eof {
+		return l.new_token(rune(0), l.token_types["EOF"])
+	}
+
+	ret := l.new_token(string(current), l.token_types["Unknown"])
+	if p, _ := l.Peek(); current == '-' && unicode.IsDigit(p) {
+		num, err := l.NextNumber(current)
+		if err != nil {
+			return nil
+		}
+		ret.Type = l.token_types["Number"]
+		ret.Value = num
+		return ret
+	}
+	if tp, ok := l.single_chars[current]; ok {
+		ret.Type = tp
+	} else if dc, ok := l.double_chars[current]; ok {
+		l.handle_double_char(current, ret, dc)
+	} else if unicode.IsDigit(current) {
+		num, err := l.NextNumber(current)
+		if err != nil {
+			return nil
+		}
+		ret.Type = l.token_types["Number"]
+		ret.Value = num
+	}
+	return ret
 }
