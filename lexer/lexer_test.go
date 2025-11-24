@@ -91,7 +91,13 @@ func TestLexerNextToken(t *testing.T) {
 	}
 	lexer := lexer.DefineLexer(cfg)
 
-	src := " - * \n + \n = ! != == 1234 1.23e-4"
+	src := ` - * 
+  + 
+  = ! != == 1234 1.23e-4
+  " test " 1234
+  an_identifier
+  for
+  `
 	lexer.AddSource(src)
 
 	type test_info struct {
@@ -100,23 +106,23 @@ func TestLexerNextToken(t *testing.T) {
 	}
 	tests := []test_info{
 		{
-			expect: '-',
+			expect: "-",
 			tp:     "Minus",
 		},
 		{
-			expect: '*',
+			expect: "*",
 			tp:     "Times",
 		},
 		{
-			expect: '+',
+			expect: "+",
 			tp:     "Plus",
 		},
 		{
-			expect: '=',
+			expect: "=",
 			tp:     "Equal",
 		},
 		{
-			expect: '!',
+			expect: "!",
 			tp:     "Not",
 		},
 		{
@@ -128,12 +134,28 @@ func TestLexerNextToken(t *testing.T) {
 			tp:     "EqualEqual",
 		},
 		{
-			expect: "1234",
+			expect: int64(1234),
 			tp:     "Number",
 		},
 		{
-			expect: "1.23e-4",
+			expect: 1.23e-4,
 			tp:     "Number",
+		},
+		{
+			expect: " test ",
+			tp:     "String",
+		},
+		{
+			expect: int64(1234),
+			tp:     "Number",
+		},
+		{
+			expect: "an_identifier",
+			tp:     "Identifier",
+		},
+		{
+			expect: "for",
+			tp:     "For",
 		},
 	}
 
@@ -142,6 +164,32 @@ func TestLexerNextToken(t *testing.T) {
 		if lexer.TypeName(token.Type) != test.tp {
 			t.Errorf("Expected %s, Found %s", test.tp, lexer.TypeName(token.Type))
 		}
+		if token.Value != test.expect {
+			t.Errorf("Expected %v, Found %v", test.expect, token.Value)
+		}
+	}
+}
+
+func TestLexerNextString(t *testing.T) {
+	cfg := config.ConfigFromJson([]byte(configuration))
+	if cfg == nil {
+		t.Errorf("Could not instantiate the config")
+	}
+	lexer := lexer.DefineLexer(cfg)
+
+	src := ` " test string "  `
+	lexer.AddSource(src)
+
+	_, eof := lexer.NextNonWhite()
+	if eof {
+		t.Errorf("Unexpected eof")
+	}
+	str, err := lexer.NextString()
+	if err != nil {
+		t.Errorf("%e", err)
+	}
+	if str != " test string " {
+		t.Errorf("expected ' test string ', found '%s'", str)
 	}
 }
 
@@ -151,6 +199,7 @@ const configuration = `{
 			"Integer",
 			"Float",
 			"Boolean",
+			"String",
 			"Plus",
 			"Minus",
 			"Times",

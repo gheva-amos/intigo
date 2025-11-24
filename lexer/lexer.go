@@ -111,6 +111,15 @@ func (l *Lexer) NextToken() *Token {
 	}
 
 	ret := l.new_token(string(current), l.token_types["Unknown"])
+	if current == '"' || current == '\'' {
+		var err error
+		ret.Value, err = l.NextString()
+		ret.Type = l.token_types["String"]
+		if err != nil {
+			return nil
+		}
+		return ret
+	}
 	if p, _ := l.Peek(); current == '-' && unicode.IsDigit(p) {
 		num, err := l.NextNumber(current)
 		if err != nil {
@@ -131,6 +140,15 @@ func (l *Lexer) NextToken() *Token {
 		}
 		ret.Type = l.token_types["Number"]
 		ret.Value = num
+	} else {
+		word := l.NextWord(current)
+		ret.Value = word
+		tp, ok := l.keyword_map[word]
+		if ok {
+			ret.Type = tp
+		} else {
+			ret.Type = l.token_types["Identifier"]
+		}
 	}
 	return ret
 }
