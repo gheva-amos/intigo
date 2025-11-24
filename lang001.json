@@ -4,6 +4,7 @@
 			"Integer",
 			"Float",
 			"Boolean",
+			"String",
 			"Plus",
 			"Minus",
 			"Times",
